@@ -167,6 +167,7 @@ export function DashboardScreen({ backend }: { backend: "gemini" | "reglas" | "o
       </Card>
 
       <Text style={styles.footer}>Datos simulados con fines académicos · {f.logSize} lecturas en el registro</Text>
+      <Button label="Restablecer datos guardados" icon="trash-outline" variant="ghost" onPress={f.resetData} style={{ marginTop: 12 }} />
     </ScrollView>
   );
 }
