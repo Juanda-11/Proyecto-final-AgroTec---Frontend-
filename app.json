@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "AgroTec",
+    "slug": "agrotec",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#06100B",
+    "ios": { "supportsTablet": false },
+    "android": { "adaptiveIcon": { "backgroundColor": "#06100B" } },
+    "web": { "bundler": "metro", "output": "single", "name": "AgroTec", "shortName": "AgroTec", "themeColor": "#06100B", "backgroundColor": "#06100B", "lang": "es" },
+    "plugins": ["expo-image-picker"]
+  }
+}
