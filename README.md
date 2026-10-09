@@ -10,6 +10,10 @@ Backend (Python + IA): repositorio *Proyecto-final-AgroTec---Backend*.
 3. **AgroIA** — chat con contexto de sensores, diagnóstico por síntomas/foto y autocompletado con Trie.
 4. **Rutas** — grafo de municipios con Dijkstra, BFS y DFS.
 
+## Detalles de uso
+- Los datos del usuario (cultivo en foco, objetivos de humedad, parcelas del AVL y el chat) se guardan en el dispositivo; el botón *Restablecer datos guardados* (pantalla Inicio) los borra.
+- Las pantallas permanecen montadas al cambiar de pestaña, así que no se pierde el chat ni el progreso.
+
 ## Estructuras de datos (`src/structures`)
 Stack · Queue · SinglyLinkedList · DoublyLinkedList · CircularLinkedList · DoublyCircularList · AVLTree · NaryTree · Graph · **Trie** (investigada).
 Ver `docs/REVISION_PROYECTO.md` para el mapa estructura → caso de uso.

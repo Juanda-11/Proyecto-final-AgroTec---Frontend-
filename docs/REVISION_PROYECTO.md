@@ -12,6 +12,7 @@
 | 7 | Sensores = ruido blanco aleatorio | Datos poco creíbles | Caminata aleatoria con regresión a la media y botones "simular sequía/lluvia" |
 | 8 | Tipografía de 7–9 px y emojis como iconos | Ilegible en móvil | Mínimo 11 px, iconos vectoriales (Ionicons), contraste revisado |
 | 9 | Mapa con líneas posicionadas "a mano" | No reflejaba el grafo | Mapa SVG dibujado desde el propio grafo, ruta resaltada, BFS/DFS/Dijkstra |
+| 11 | Al cambiar de pestaña se perdían el chat y las parcelas insertadas | Mala experiencia, estado inconsistente | Pantallas montadas + persistencia local (AsyncStorage) con lectura tolerante a fallos |
 | 10 | Sin build web / Vercel | No se podía desplegar | `expo export --platform web` + `vercel.json`; marco de teléfono en pantallas anchas |
 
 ## Cobertura del cronograma de la materia
