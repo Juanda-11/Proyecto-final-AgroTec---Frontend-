@@ -14,6 +14,9 @@ Backend (Python + IA): repositorio *Proyecto-final-AgroTec---Backend*.
 - Los datos del usuario (cultivo en foco, objetivos de humedad, parcelas del AVL y el chat) se guardan en el dispositivo; el botón *Restablecer datos guardados* (pantalla Inicio) los borra.
 - Las pantallas permanecen montadas al cambiar de pestaña, así que no se pierde el chat ni el progreso.
 
+## Iconos
+Los PNG no se versionan: `pip install pillow && python scripts/generate_icons.py` los genera en `assets/` (ver el encabezado del script para enlazarlos en `app.json`).
+
 ## Estructuras de datos (`src/structures`)
 Stack · Queue · SinglyLinkedList · DoublyLinkedList · CircularLinkedList · DoublyCircularList · AVLTree · NaryTree · Graph · **Trie** (investigada).
 Ver `docs/REVISION_PROYECTO.md` para el mapa estructura → caso de uso.

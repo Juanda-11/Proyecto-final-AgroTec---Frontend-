@@ -4,3 +4,6 @@ node_modules/
 *.log
 dist/
 .env
+
+# Iconos generados con scripts/generate_icons.py
+assets/
