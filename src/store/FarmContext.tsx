@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { INITIAL_LOTS } from "../data/farm";
-import type { Alert, Lot, Reading } from "../data/types";
+import type { Alert, ChatMessage, Lot, Reading } from "../data/types";
+import { clearState, loadState, saveState } from "../services/storage";
 import { alertsFor, initialReading, nextReading } from "../iot/simulator";
 import { DoublyLinkedList, Queue, SinglyLinkedList, Stack } from "../structures";
 
@@ -31,6 +32,13 @@ interface FarmValue {
   /** Registro secuencial (lista simple). */
   logSize: number;
   lots: Lot[];
+  /** Códigos de parcelas añadidas por el usuario al índice AVL. */
+  extraParcels: number[];
+  addParcel: (code: number) => void;
+  chat: ChatMessage[];
+  setChat: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
+  /** Borra datos guardados y restablece lotes, chat y parcelas. */
+  resetData: () => void;
   setMoistureTarget: (id: string, value: number) => void;
   undoConfig: () => ConfigChange | undefined;
   canUndo: boolean;
@@ -38,6 +46,12 @@ interface FarmValue {
 
 const Ctx = createContext<FarmValue | null>(null);
 const MAX_SERIES = 30;
+const MAX_CHAT = 40;
+export const WELCOME: ChatMessage = {
+  id: "w",
+  role: "assistant",
+  text: "¡Hola! Soy AgroIA 🌱. Conozco las lecturas de tu finca y puedo ayudarte con riego, plagas, pH y fertilización.",
+};
 const MAX_LOG = 300;
 
 export function FarmProvider({ children }: { children: React.ReactNode }) {
@@ -70,6 +84,53 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
   const [crop, setCrop] = useState("Papa");
   const [auto, setAuto] = useState(true);
   const [lots, setLots] = useState<Lot[]>(INITIAL_LOTS);
+
+  const [extraParcels, setExtraParcels] = useState<number[]>([]);
+  const [chat, setChat] = useState<ChatMessage[]>([WELCOME]);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Cargar lo guardado al abrir la app
+  useEffect(() => {
+    let alive = true;
+    loadState().then((saved) => {
+      if (!alive) return;
+      if (saved.crop) setCrop(saved.crop);
+      if (saved.targets) {
+        const t = saved.targets;
+        setLots((cur) => cur.map((l) => (typeof t[l.id] === "number" ? { ...l, moistureTarget: t[l.id]! } : l)));
+      }
+      if (Array.isArray(saved.extraParcels)) setExtraParcels(saved.extraParcels.filter((n) => Number.isInteger(n)));
+      if (Array.isArray(saved.chat) && saved.chat.length) setChat(saved.chat);
+      setHydrated(true);
+    });
+    return () => { alive = false; };
+  }, []);
+
+  // Guardar cuando cambia algo relevante
+  useEffect(() => {
+    if (!hydrated) return;
+    const t = setTimeout(() => {
+      saveState({
+        crop,
+        targets: Object.fromEntries(lots.map((l) => [l.id, l.moistureTarget])),
+        extraParcels,
+        chat: chat.slice(-MAX_CHAT),
+      });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [hydrated, crop, lots, extraParcels, chat]);
+
+  const addParcel = useCallback((code: number) => {
+    setExtraParcels((cur) => (cur.includes(code) ? cur : [...cur, code]));
+  }, []);
+
+  const resetData = useCallback(() => {
+    clearState();
+    setLots(INITIAL_LOTS);
+    setExtraParcels([]);
+    setChat([WELCOME]);
+    setCrop("Papa");
+  }, []);
 
   const cropRef = useRef(crop);
   cropRef.current = crop;
@@ -137,10 +198,11 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
       historyNext: () => { hist.next(); bump(); },
       historyLatest: () => { hist.toLatest(); bump(); },
       logSize: log.size,
-      lots, setMoistureTarget, undoConfig, canUndo: !undoStack.isEmpty(),
+      lots, extraParcels, addParcel, chat, setChat, resetData,
+      setMoistureTarget, undoConfig, canUndo: !undoStack.isEmpty(),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [version, reading, series, crop, auto, lots, tick, attendNext, setMoistureTarget, undoConfig]
+    [version, reading, series, crop, auto, lots, extraParcels, chat, tick, attendNext, setMoistureTarget, undoConfig, addParcel, resetData]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
