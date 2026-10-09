@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   btnInner: { flexDirection: "row", alignItems: "center", gap: 8 },
   btnText: { fontSize: font.md, fontWeight: "800" },
   iconBtn: { width: 44, height: 44, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.panel, alignItems: "center", justifyContent: "center" },
-  chip: { paddingHorizontal: 13, paddingVertical: 9, borderRadius: 13, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.panel },
+  chip: { paddingHorizontal: 14, paddingVertical: 11, minHeight: 44, justifyContent: "center", borderRadius: 13, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.panel },
   chipOn: { backgroundColor: "#1D5A3C", borderColor: "#4C9D6F" },
   chipText: { color: colors.muted, fontSize: font.sm, fontWeight: "700" },
   track: { height: 7, borderRadius: 4, backgroundColor: "#1B3226", overflow: "hidden" },
