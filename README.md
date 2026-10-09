@@ -32,6 +32,8 @@ npm run typecheck
 Sin `EXPO_PUBLIC_API_URL` la app funciona con IA local de respaldo (reglas).
 
 ## Despliegue en Vercel (solo móvil)
+Guía completa y ordenada: `docs/DESPLIEGUE.md`.
+
 1. Importa este repo en Vercel; `vercel.json` ya define build (`expo export --platform web`) y salida (`dist`).
 2. En *Settings → Environment Variables* añade `EXPO_PUBLIC_API_URL` con la URL del backend desplegado.
 3. En escritorio la app se muestra dentro de un marco de teléfono; está pensada para móvil.

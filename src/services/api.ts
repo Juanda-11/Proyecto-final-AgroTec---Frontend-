@@ -4,7 +4,7 @@ import type { Assessment, ChatMessage, DiagnoseResult, ForecastResult, Reading }
 /** Define EXPO_PUBLIC_API_URL (p. ej. https://agrotec-api.vercel.app). Sin ella se usa solo IA local. */
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
-async function post<T>(path: string, body: unknown, timeoutMs = 20000): Promise<T> {
+async function post<T>(path: string, body: unknown, timeoutMs = 35000): Promise<T> {
   if (!API_URL) throw new Error("API no configurada");
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
