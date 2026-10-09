@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,6 +8,7 @@ import { DashboardScreen } from "./src/screens/DashboardScreen";
 import { FarmScreen } from "./src/screens/FarmScreen";
 import { AssistantScreen } from "./src/screens/AssistantScreen";
 import { RoutesScreen } from "./src/screens/RoutesScreen";
+import { Splash } from "./src/components/Splash";
 import { FarmProvider } from "./src/store/FarmContext";
 import { checkBackend } from "./src/services/api";
 import { colors, gradients } from "./src/theme";
@@ -25,6 +26,8 @@ function Shell() {
   const [tab, setTab] = useState<Tab>("home");
   const [backend, setBackend] = useState<"gemini" | "reglas" | "offline">("offline");
   const fade = useRef(new Animated.Value(1)).current;
+  const [splash, setSplash] = useState(true);
+  const hideSplash = useCallback(() => setSplash(false), []);
 
   useEffect(() => { checkBackend().then(setBackend); }, []);
 
@@ -40,11 +43,13 @@ function Shell() {
     <LinearGradient colors={[colors.bg, "#081A12", colors.bg]} style={styles.app}>
       <StatusBar style="light" />
       <Animated.View style={{ flex: 1, paddingTop: insets.top, opacity: fade }}>
-        {tab === "home" && <DashboardScreen backend={backend} />}
-        {tab === "farm" && <FarmScreen />}
-        {tab === "ai" && <AssistantScreen backend={backend} />}
-        {tab === "routes" && <RoutesScreen />}
+        {/* Las pantallas siguen montadas para conservar chat, parcelas y desplazamiento al cambiar de pestaña */}
+        <View style={[styles.page, tab !== "home" && styles.hidden]}><DashboardScreen backend={backend} /></View>
+        <View style={[styles.page, tab !== "farm" && styles.hidden]}><FarmScreen /></View>
+        <View style={[styles.page, tab !== "ai" && styles.hidden]}><AssistantScreen backend={backend} /></View>
+        <View style={[styles.page, tab !== "routes" && styles.hidden]}><RoutesScreen /></View>
       </Animated.View>
+      {splash ? <Splash onDone={hideSplash} /> : null}
       <View style={[styles.bar, { bottom: Math.max(insets.bottom, 10) }]}>
         {TABS.map((t) => {
           const on = tab === t.key;
@@ -83,6 +88,8 @@ export default function App() {
 
 const styles = StyleSheet.create({
   app: { flex: 1 },
+  page: { flex: 1 },
+  hidden: { display: "none" },
   desktop: { flex: 1, backgroundColor: "#020705", alignItems: "center", justifyContent: "center", padding: 16 },
   phone: { width: 410, height: "92%", maxHeight: 880, borderRadius: 38, overflow: "hidden", borderWidth: 8, borderColor: "#16251D" },
   hint: { color: colors.faint, fontSize: 12, marginTop: 14 },

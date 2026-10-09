@@ -19,9 +19,8 @@ export function AssistantScreen({ backend }: { backend: "gemini" | "reglas" | "o
   const scroller = useRef<ScrollView>(null);
   const [tab, setTab] = useState<"chat" | "diag">("chat");
 
-  const [msgs, setMsgs] = useState<ChatMessage[]>([
-    { id: "w", role: "assistant", text: "¡Hola! Soy AgroIA 🌱. Conozco las lecturas de tu finca y puedo ayudarte con riego, plagas, pH y fertilización." },
-  ]);
+  const msgs = f.chat;
+  const setMsgs = f.setChat;
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
 
