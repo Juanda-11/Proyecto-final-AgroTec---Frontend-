@@ -13,23 +13,24 @@ export function FarmScreen() {
   const f = useFarm();
   const tree = useMemo(() => buildFarmTree(f.lots), [f.lots]);
 
-  // Índice AVL de parcelas por código
-  const avl = useRef<AVLTree<Lot>>(null as unknown as AVLTree<Lot>);
-  if (!avl.current) {
-    avl.current = new AVLTree<Lot>();
-    f.lots.forEach((l) => avl.current.insert(l.code, l));
-  }
+  // Índice AVL de parcelas por código (se reconstruye de los lotes + parcelas añadidas)
+  const avl = useMemo(() => {
+    const t = new AVLTree<Lot>();
+    f.lots.forEach((l) => t.insert(l.code, l));
+    f.extraParcels.forEach((code) =>
+      t.insert(code, { id: `X${code}`, code, name: `Parcela ${code}`, crop: "Papa", hectares: 1, moistureTarget: 45 })
+    );
+    return t;
+  }, [f.lots, f.extraParcels]);
   const [query, setQuery] = useState("");
   const [newCode, setNewCode] = useState("");
-  const [, force] = useState(0);
-  const found = query.trim() === "" ? undefined : avl.current.find(Number(query));
+  const found = query.trim() === "" ? undefined : avl.find(Number(query));
 
   const addParcel = () => {
     const code = Number(newCode);
-    if (!Number.isInteger(code) || code <= 0) return;
-    avl.current.insert(code, { id: `X${code}`, code, name: `Parcela ${code}`, crop: "Papa", hectares: 1, moistureTarget: 45 });
+    if (!Number.isInteger(code) || code <= 0 || code > 99999) return;
+    f.addParcel(code);
     setNewCode("");
-    force((x) => x + 1);
   };
 
   // Rondas: circular simple (rotación) y circular doble (inspección)
@@ -39,7 +40,7 @@ export function FarmScreen() {
   const [rot, setRot] = useState(rotation.current.current());
   const [stop, setStop] = useState(round.current.current());
 
-  const levels = avl.current.levels();
+  const levels = avl.levels();
 
   return (
     <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -81,7 +82,7 @@ export function FarmScreen() {
         <Text style={[styles.muted, { marginTop: 8 }]}>{tree.count()} nodos · profundidad {tree.depth()}</Text>
       </Card>
 
-      <Title sub={`Árbol AVL · ${avl.current.size} parcelas · altura ${avl.current.height} · ${avl.current.rotations} rotaciones`}>Índice de parcelas</Title>
+      <Title sub={`Árbol AVL · ${avl.size} parcelas · altura ${avl.height} · ${avl.rotations} rotaciones`}>Índice de parcelas</Title>
       <Card glow>
         <View style={styles.row}>
           <TextInput style={styles.input} value={query} onChangeText={setQuery} keyboardType="number-pad" placeholder="Buscar código (p. ej. 101)" placeholderTextColor={colors.faint} />
@@ -91,17 +92,19 @@ export function FarmScreen() {
             {found ? `✔ ${found.name} · ${found.crop}` : "✖ No existe esa parcela"}
           </Text>
         )}
-        <View style={styles.avlBox}>
-          {levels.map((lvl, i) => (
-            <View key={i} style={styles.avlLevel}>
-              {lvl.map((k, j) => (
-                <View key={j} style={[styles.avlNode, k === null && { opacity: 0 }, found && k === found.code && { backgroundColor: colors.lime }]}>
-                  <Text style={[styles.avlText, found && k === found.code && { color: "#10210F" }]}>{k ?? ""}</Text>
-                </View>
-              ))}
-            </View>
-          ))}
-        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.avlScroll}>
+          <View style={styles.avlBox}>
+            {levels.map((lvl, i) => (
+              <View key={i} style={styles.avlLevel}>
+                {lvl.map((k, j) => (
+                  <View key={j} style={[styles.avlNode, k === null && { opacity: 0 }, found && k === found.code && { backgroundColor: colors.lime }]}>
+                    <Text style={[styles.avlText, found && k === found.code && { color: "#10210F" }]}>{k ?? ""}</Text>
+                  </View>
+                ))}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
         <View style={[styles.row, { marginTop: 10 }]}>
           <TextInput style={[styles.input, { flex: 1 }]} value={newCode} onChangeText={setNewCode} keyboardType="number-pad" placeholder="Nuevo código" placeholderTextColor={colors.faint} />
           <Button label="Insertar" icon="add-circle" variant="emerald" onPress={addParcel} />
@@ -141,9 +144,10 @@ const styles = StyleSheet.create({
   treeText: { color: colors.muted, fontSize: font.sm + 0.5 },
   input: { flex: 1, color: colors.text, backgroundColor: colors.bg2, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingHorizontal: 14, minHeight: 48, fontSize: font.md },
   result: { fontWeight: "800", fontSize: font.md, marginTop: 10 },
-  avlBox: { marginTop: 14, gap: 8, alignItems: "center" },
-  avlLevel: { flexDirection: "row", gap: 6, justifyContent: "center" },
-  avlNode: { minWidth: 40, height: 34, paddingHorizontal: 6, borderRadius: 17, backgroundColor: "#1D5A3C", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#4C9D6F" },
+  avlScroll: { flexGrow: 1, justifyContent: "center", paddingVertical: 4 },
+  avlBox: { marginTop: 10, gap: 8, alignItems: "center" },
+  avlLevel: { flexDirection: "row", gap: 4, justifyContent: "center" },
+  avlNode: { minWidth: 38, height: 32, paddingHorizontal: 5, borderRadius: 16, backgroundColor: "#1D5A3C", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#4C9D6F" },
   avlText: { color: colors.text, fontWeight: "800", fontSize: font.sm },
   big: { color: colors.lime, fontSize: font.xl, fontWeight: "900", marginBottom: 6, borderRadius: radius.md },
 });
