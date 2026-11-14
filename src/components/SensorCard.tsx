@@ -7,7 +7,7 @@ import { SENSOR_META } from "../iot/simulator";
 import { colors, font, radius } from "../theme";
 import { Pill, ProgressBar, riskColor } from "./ui";
 
-export function SensorCard({ sensor, value, risk }: { sensor: SensorKey; value: number; risk: Risk }) {
+export function SensorCard({ sensor, value, risk, badge }: { sensor: SensorKey; value: number; risk: Risk; badge?: "REAL" | "SIM" }) {
   const meta = SENSOR_META[sensor];
   const flash = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -26,7 +26,10 @@ export function SensorCard({ sensor, value, risk }: { sensor: SensorKey; value: 
         </View>
         <Pill risk={risk} />
       </View>
-      <Text style={styles.label}>{meta.label}</Text>
+      <View style={styles.labelRow}>
+        <Text style={styles.label}>{meta.label}</Text>
+        {badge ? <Text style={[styles.badge, badge === "REAL" ? styles.badgeReal : styles.badgeSim]}>{badge}</Text> : null}
+      </View>
       <Animated.View style={[styles.valueRow, { opacity: flash }]}>
         <Text style={styles.value}>{value.toFixed(meta.decimals)}</Text>
         <Text style={styles.unit}>{meta.unit}</Text>
@@ -40,7 +43,11 @@ const styles = StyleSheet.create({
   card: { width: "100%", backgroundColor: colors.panel, borderWidth: 1, borderRadius: radius.md, padding: 13 },
   top: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   icon: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  label: { color: colors.muted, fontSize: font.xs + 0.5, marginTop: 12 },
+  labelRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 12, flexWrap: "wrap" },
+  label: { color: colors.muted, fontSize: font.xs + 0.5 },
+  badge: { fontSize: 9, fontWeight: "900", letterSpacing: 0.6, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6, overflow: "hidden" },
+  badgeReal: { color: "#10210F", backgroundColor: colors.lime },
+  badgeSim: { color: colors.muted, backgroundColor: "#1B3226" },
   valueRow: { flexDirection: "row", alignItems: "baseline", marginVertical: 3 },
   value: { color: colors.text, fontSize: 29, fontWeight: "900" },
   unit: { color: colors.muted, fontSize: font.sm, marginLeft: 4 },
