@@ -24,6 +24,16 @@ export function DashboardScreen({ backend }: { backend: "gemini" | "reglas" | "o
   const risks = SENSOR_ORDER.map((k) => sensorRisk(k, shown[k], f.crop));
   const worst = risks.includes("ALTO") ? "ALTO" : risks.includes("MEDIO") ? "MEDIO" : "BAJO";
   const viewingPast = f.history.hasNext;
+  const real = f.source === "device";
+  const ds = f.deviceStatus;
+  const heroKicker = real ? (ds.state === "online" ? "SENSOR REAL" : "SIN SEÑAL") : f.auto ? "EN VIVO" : "PAUSADO";
+  const statusColor = ds.state === "online" ? colors.lime : ds.state === "unknown" ? colors.muted : colors.warning;
+  const statusText =
+    ds.state === "online" ? `Nodo ${ds.deviceId ?? ""} en línea · hace ${Math.round(ds.ageSeconds ?? 0)} s`
+    : ds.state === "offline" ? `Nodo ${ds.deviceId ?? ""} sin señal hace ${Math.round(ds.ageSeconds ?? 0)} s`
+    : ds.state === "nodata" ? "Aún no hay datos del nodo. Enciende el ESP32 o usa el simulador de dispositivo."
+    : ds.state === "error" ? "No se pudo contactar al servidor. Reintentando…"
+    : "Buscando el nodo…";
 
   useEffect(() => { setAssessment(null); }, [f.crop]);
 
@@ -49,7 +59,7 @@ export function DashboardScreen({ backend }: { backend: "gemini" | "reglas" | "o
           <View style={{ flex: 1 }}>
             <View style={styles.liveRow}>
               <Pulse color={riskColor(worst)} />
-              <Text style={styles.kicker}>{f.auto ? "EN VIVO" : "PAUSADO"} · {fmtTime(shown.timestamp)}</Text>
+              <Text style={styles.kicker}>{heroKicker} · {fmtTime(shown.timestamp)}</Text>
             </View>
             <Text style={styles.heroTitle}>{worst === "ALTO" ? "Atención requerida" : worst === "MEDIO" ? "Revisar pronto" : "Cultivo estable"}</Text>
             <Text style={styles.heroText}>Cultivo en foco: <Text style={{ color: colors.lime, fontWeight: "800" }}>{f.crop}</Text></Text>
@@ -63,6 +73,17 @@ export function DashboardScreen({ backend }: { backend: "gemini" | "reglas" | "o
           {CROPS.map((c) => <Chip key={c} label={c} selected={f.crop === c} onPress={() => f.setCrop(c)} />)}
         </ScrollView>
       </FadeIn>
+
+      <View style={styles.sourceRow}>
+        <Chip label="Simulado" selected={!real} onPress={() => f.setSource("simulated")} />
+        <Chip label="Sensor real (ESP32)" selected={real} onPress={() => f.setSource("device")} />
+      </View>
+      {real ? (
+        <View style={[styles.deviceBar, { borderColor: statusColor + "66" }]}>
+          <Pulse color={statusColor} size={7} />
+          <Text style={styles.deviceText}>{statusText}</Text>
+        </View>
+      ) : null}
 
       <Title
         sub={`Lista doble · lectura ${f.history.position} de ${f.history.size}`}
@@ -82,11 +103,13 @@ export function DashboardScreen({ backend }: { backend: "gemini" | "reglas" | "o
       <View style={styles.grid}>
         {SENSOR_ORDER.map((k, i) => (
           <FadeIn key={k} delay={140 + i * 60} style={{ width: "48.3%" }}>
-            <SensorCard sensor={k} value={shown[k]} risk={risks[i]!} />
+            <SensorCard sensor={k} value={shown[k]} risk={risks[i]!} badge={real ? (ds.realKeys.includes(k) ? "REAL" : "SIM") : undefined} />
           </FadeIn>
         ))}
       </View>
 
+      {!real ? (
+        <>
       <View style={styles.actions}>
         <Button label="Simular lectura" icon="flash" onPress={() => f.tick()} style={{ flex: 1 }} />
         <Button label={f.auto ? "Pausar" : "Reanudar"} icon={f.auto ? "pause" : "play"} variant="ghost" onPress={() => f.setAuto(!f.auto)} />
@@ -95,6 +118,8 @@ export function DashboardScreen({ backend }: { backend: "gemini" | "reglas" | "o
         <Button label="Simular sequía" icon="sunny" variant="ghost" onPress={() => { for (let i = 0; i < 4; i++) f.tick({ soilMoisture: -9, temperature: 0.8 }); }} style={{ flex: 1 }} />
         <Button label="Simular lluvia" icon="rainy" variant="ghost" onPress={() => { for (let i = 0; i < 3; i++) f.tick({ soilMoisture: 8, rain: 15 }); }} style={{ flex: 1 }} />
       </View>
+        </>
+      ) : null}
 
       <Card style={{ marginTop: 6 }}>
         <View style={styles.rowBetween}>
@@ -166,7 +191,7 @@ export function DashboardScreen({ backend }: { backend: "gemini" | "reglas" | "o
         ) : null}
       </Card>
 
-      <Text style={styles.footer}>Datos simulados con fines académicos · {f.logSize} lecturas en el registro</Text>
+      <Text style={styles.footer}>{real ? "Datos del nodo físico" : "Datos simulados con fines académicos"} · {f.logSize} lecturas en el registro</Text>
       <Button label="Restablecer datos guardados" icon="trash-outline" variant="ghost" onPress={f.resetData} style={{ marginTop: 12 }} />
     </ScrollView>
   );
@@ -192,5 +217,8 @@ const styles = StyleSheet.create({
   muted: { color: colors.muted, fontSize: font.sm, lineHeight: 18, marginTop: 4 },
   alert: { flexDirection: "row", borderWidth: 1, borderColor: colors.borderSoft, backgroundColor: colors.bg2, borderRadius: 14, padding: 11 },
   alertTitle: { color: colors.text, fontSize: font.sm + 0.5, fontWeight: "800" },
+  sourceRow: { flexDirection: "row", gap: 8, marginBottom: 10 },
+  deviceBar: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderRadius: 14, paddingVertical: 8, paddingHorizontal: 10, marginBottom: 6, backgroundColor: colors.bg2 },
+  deviceText: { color: colors.text, fontSize: font.sm, flex: 1 },
   footer: { color: colors.faint, fontSize: 11, textAlign: "center", marginTop: 8 },
 });
