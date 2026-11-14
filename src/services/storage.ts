@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { ChatMessage } from "../data/types";
+import type { ChatMessage, SensorSource } from "../data/types";
 
 const KEY = "agrotec:v1";
 
@@ -9,6 +9,7 @@ export interface PersistedState {
   targets?: Record<string, number>;
   extraParcels?: number[];
   chat?: ChatMessage[];
+  source?: SensorSource;
 }
 
 /** Lectura tolerante: si el almacenamiento falla o está corrupto se arranca limpio. */
