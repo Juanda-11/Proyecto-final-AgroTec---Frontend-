@@ -6,7 +6,7 @@ import { SensorCard } from "../components/SensorCard";
 import { Button, Card, Chip, FadeIn, IconButton, Pill, Pulse, ScreenHeader, Sparkline, Tag, Title, riskColor } from "../components/ui";
 import { CROPS } from "../data/farm";
 import type { Assessment, ForecastResult } from "../data/types";
-import { SENSOR_ORDER, sensorRisk } from "../iot/simulator";
+import { SENSOR_ORDER, rainStatus, sensorRisk } from "../iot/simulator";
 import * as api from "../services/api";
 import { useFarm } from "../store/FarmContext";
 import { colors, font, gradients, radius } from "../theme";
@@ -102,8 +102,14 @@ export function DashboardScreen({ backend }: { backend: "gemini" | "reglas" | "o
 
       <View style={styles.grid}>
         {SENSOR_ORDER.map((k, i) => (
-          <FadeIn key={k} delay={140 + i * 60} style={{ width: "48.3%" }}>
-            <SensorCard sensor={k} value={shown[k]} risk={risks[i]!} badge={real ? (ds.realKeys.includes(k) ? "REAL" : "SIM") : undefined} />
+          <FadeIn key={k} delay={140 + i * 60} style={{ width: i === SENSOR_ORDER.length - 1 && SENSOR_ORDER.length % 2 === 1 ? "100%" : "48.3%" }}>
+            <SensorCard
+              sensor={k}
+              value={shown[k]}
+              risk={risks[i]!}
+              badge={real ? (ds.realKeys.includes(k) ? "REAL" : "SIM") : undefined}
+              caption={k === "rain" ? rainStatus(shown[k]) : undefined}
+            />
           </FadeIn>
         ))}
       </View>
