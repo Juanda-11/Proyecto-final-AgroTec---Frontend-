@@ -11,7 +11,15 @@ export const SENSOR_META: Record<SensorKey, { label: string; unit: string; icon:
   uv: { label: "Radiación UV", unit: "UV", icon: "sunny", min: 0, max: 100, decimals: 0 },
   rain: { label: "Prob. de lluvia", unit: "%", icon: "rainy", min: 0, max: 100, decimals: 0 },
 };
-export const SENSOR_ORDER: SensorKey[] = ["soilMoisture", "temperature", "ph", "uv"];
+export const SENSOR_ORDER: SensorKey[] = ["soilMoisture", "temperature", "ph", "uv", "rain"];
+
+/** Texto corto para la tarjeta de lluvia, según el porcentaje que mide la placa de agua. */
+export function rainStatus(v: number): string {
+  if (v < 15) return "Sin lluvia";
+  if (v < 50) return "Llovizna";
+  if (v < 85) return "Lluvia";
+  return "Lluvia intensa";
+}
 
 export function initialReading(): Reading {
   return { soilMoisture: 52, temperature: 19, ph: 6.1, uv: 40, rain: 25, timestamp: Date.now() };
