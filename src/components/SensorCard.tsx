@@ -7,7 +7,7 @@ import { SENSOR_META } from "../iot/simulator";
 import { colors, font, radius } from "../theme";
 import { Pill, ProgressBar, riskColor } from "./ui";
 
-export function SensorCard({ sensor, value, risk, badge }: { sensor: SensorKey; value: number; risk: Risk; badge?: "REAL" | "SIM" }) {
+export function SensorCard({ sensor, value, risk, badge, caption }: { sensor: SensorKey; value: number; risk: Risk; badge?: "REAL" | "SIM"; caption?: string }) {
   const meta = SENSOR_META[sensor];
   const flash = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -34,6 +34,7 @@ export function SensorCard({ sensor, value, risk, badge }: { sensor: SensorKey; 
         <Text style={styles.value}>{value.toFixed(meta.decimals)}</Text>
         <Text style={styles.unit}>{meta.unit}</Text>
       </Animated.View>
+      {caption ? <Text style={styles.caption}>{caption}</Text> : null}
       <ProgressBar value={pct} color={color} />
     </View>
   );
@@ -51,4 +52,5 @@ const styles = StyleSheet.create({
   valueRow: { flexDirection: "row", alignItems: "baseline", marginVertical: 3 },
   value: { color: colors.text, fontSize: 29, fontWeight: "900" },
   unit: { color: colors.muted, fontSize: font.sm, marginLeft: 4 },
+  caption: { color: colors.text, fontSize: font.sm, fontWeight: "700", marginBottom: 4 },
 });
