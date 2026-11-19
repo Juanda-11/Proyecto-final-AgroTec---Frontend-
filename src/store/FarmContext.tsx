@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { INITIAL_LOTS } from "../data/farm";
-import type { Alert, ChatMessage, Lot, Reading } from "../data/types";
+import type { Alert, ChatMessage, DeviceStatus, Lot, Reading, SensorKey, SensorSource } from "../data/types";
+import * as api from "../services/api";
 import { clearState, loadState, saveState } from "../services/storage";
 import { alertsFor, initialReading, nextReading } from "../iot/simulator";
 import { DoublyLinkedList, Queue, SinglyLinkedList, Stack } from "../structures";
@@ -19,6 +20,10 @@ interface FarmValue {
   auto: boolean;
   setAuto: (v: boolean) => void;
   tick: (drift?: Partial<Record<keyof Reading, number>>) => void;
+  /** Where readings come from: the built-in simulator or the physical ESP32 node. */
+  source: SensorSource;
+  setSource: (s: SensorSource) => void;
+  deviceStatus: DeviceStatus;
   /** Cola FIFO de alertas pendientes. */
   pending: Alert[];
   attendNext: () => Alert | undefined;
@@ -84,6 +89,8 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
   const [crop, setCrop] = useState("Papa");
   const [auto, setAuto] = useState(true);
   const [lots, setLots] = useState<Lot[]>(INITIAL_LOTS);
+  const [source, setSourceState] = useState<SensorSource>("simulated");
+  const [deviceStatus, setDeviceStatus] = useState<DeviceStatus>({ state: "unknown", realKeys: [] });
 
   const [extraParcels, setExtraParcels] = useState<number[]>([]);
   const [chat, setChat] = useState<ChatMessage[]>([WELCOME]);
@@ -101,6 +108,7 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
       }
       if (Array.isArray(saved.extraParcels)) setExtraParcels(saved.extraParcels.filter((n) => Number.isInteger(n)));
       if (Array.isArray(saved.chat) && saved.chat.length) setChat(saved.chat);
+      if (saved.source === "device" || saved.source === "simulated") setSourceState(saved.source);
       setHydrated(true);
     });
     return () => { alive = false; };
@@ -115,10 +123,11 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
         targets: Object.fromEntries(lots.map((l) => [l.id, l.moistureTarget])),
         extraParcels,
         chat: chat.slice(-MAX_CHAT),
+        source,
       });
     }, 400);
     return () => clearTimeout(t);
-  }, [hydrated, crop, lots, extraParcels, chat]);
+  }, [hydrated, crop, lots, extraParcels, chat, source]);
 
   const addParcel = useCallback((code: number) => {
     setExtraParcels((cur) => (cur.includes(code) ? cur : [...cur, code]));
@@ -130,14 +139,15 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
     setExtraParcels([]);
     setChat([WELCOME]);
     setCrop("Papa");
+    setSourceState("simulated");
   }, []);
 
   const cropRef = useRef(crop);
   cropRef.current = crop;
   const lastRef = useRef(reading);
 
-  const tick = useCallback((drift?: Partial<Record<keyof Reading, number>>) => {
-    const r = nextReading(lastRef.current, drift);
+  /** Common path for simulated and real readings: log, history, alert queue and chart series. */
+  const pushReading = useCallback((r: Reading) => {
     lastRef.current = r;
     log.prepend(r);
     log.truncate(MAX_LOG);
@@ -149,11 +159,62 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
     bump();
   }, [hist, log, queue]);
 
+  const tick = useCallback((drift?: Partial<Record<keyof Reading, number>>) => {
+    pushReading(nextReading(lastRef.current, drift));
+  }, [pushReading]);
+
+  const setSource = useCallback((next: SensorSource) => {
+    setSourceState(next);
+    if (next === "simulated") setDeviceStatus({ state: "unknown", realKeys: [] });
+  }, []);
+
+  // Simulator: only while the source is "simulated"
   useEffect(() => {
-    if (!auto) return;
+    if (source !== "simulated" || !auto) return;
     const id = setInterval(() => tick(), 5000);
     return () => clearInterval(id);
-  }, [auto, tick]);
+  }, [source, auto, tick]);
+
+  // Physical node: poll the backend while the source is "device"
+  const lastDeviceTs = useRef(0);
+  useEffect(() => {
+    if (source !== "device") return;
+    let alive = true;
+    const poll = async () => {
+      try {
+        const latest = await api.fetchDeviceLatest();
+        if (!alive) return;
+        const d = latest.reading;
+        if (!d) {
+          setDeviceStatus({ state: "nodata", realKeys: [] });
+          return;
+        }
+        const realKeys: SensorKey[] = ["soilMoisture", "temperature"];
+        if (d.ph !== null) realKeys.push("ph");
+        if (d.uv !== null) realKeys.push("uv");
+        if (d.rain !== null) realKeys.push("rain");
+        setDeviceStatus({ state: latest.online ? "online" : "offline", deviceId: d.device_id, ageSeconds: latest.age_seconds, realKeys });
+        if (d.timestamp !== lastDeviceTs.current) {
+          lastDeviceTs.current = d.timestamp;
+          // Sensors the node does not have keep a simulated value so the dashboard stays complete.
+          const sim = nextReading(lastRef.current);
+          pushReading({
+            soilMoisture: d.soil_moisture,
+            temperature: d.temperature,
+            ph: d.ph ?? sim.ph,
+            uv: d.uv ?? sim.uv,
+            rain: d.rain ?? sim.rain,
+            timestamp: d.timestamp,
+          });
+        }
+      } catch {
+        if (alive) setDeviceStatus((cur) => ({ ...cur, state: "error" }));
+      }
+    };
+    poll();
+    const id = setInterval(poll, 8000);
+    return () => { alive = false; clearInterval(id); };
+  }, [source, pushReading]);
 
   const attendNext = useCallback(() => {
     const a = queue.dequeue();
@@ -183,7 +244,7 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<FarmValue>(
     () => ({
-      reading, series, crop, setCrop, auto, setAuto, tick,
+      reading, series, crop, setCrop, auto, setAuto, tick, source, setSource, deviceStatus,
       pending: queue.toArray(),
       attendNext,
       attended: attendedStack.toArray(),
@@ -202,7 +263,7 @@ export function FarmProvider({ children }: { children: React.ReactNode }) {
       setMoistureTarget, undoConfig, canUndo: !undoStack.isEmpty(),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [version, reading, series, crop, auto, lots, extraParcels, chat, tick, attendNext, setMoistureTarget, undoConfig, addParcel, resetData]
+    [version, reading, series, crop, auto, source, deviceStatus, lots, extraParcels, chat, tick, attendNext, setMoistureTarget, undoConfig, addParcel, resetData]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -59,3 +59,32 @@ export interface Lot {
   hectares: number;
   moistureTarget: number;
 }
+
+/** Reading as stored by the backend after the ESP32 posts it. Optional sensors are null when absent. */
+export interface DeviceReading {
+  device_id: string;
+  soil_moisture: number;
+  temperature: number;
+  humidity: number | null;
+  ph: number | null;
+  uv: number | null;
+  rain: number | null;
+  timestamp: number;
+}
+
+export interface DeviceLatest {
+  reading: DeviceReading | null;
+  online: boolean;
+  age_seconds: number | null;
+}
+
+export type SensorSource = "simulated" | "device";
+
+export interface DeviceStatus {
+  /** unknown = not asked yet, nodata = the node never reported, offline = stale, error = server unreachable */
+  state: "unknown" | "online" | "offline" | "nodata" | "error";
+  deviceId?: string;
+  ageSeconds?: number | null;
+  /** Sensors that come from hardware in the latest reading (the rest are still simulated). */
+  realKeys: SensorKey[];
+}

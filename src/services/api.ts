@@ -1,5 +1,5 @@
 import { assess, forecast as localForecast, keywordReply, ruleDiagnosis } from "../ai/localRules";
-import type { Assessment, ChatMessage, DiagnoseResult, ForecastResult, Reading } from "../data/types";
+import type { Assessment, ChatMessage, DeviceLatest, DiagnoseResult, ForecastResult, Reading } from "../data/types";
 
 /** Define EXPO_PUBLIC_API_URL (p. ej. https://agrotec-api.vercel.app). Sin ella se usa solo IA local. */
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/$/, "");
@@ -98,5 +98,19 @@ export async function summarize(alerts: string[]): Promise<{ summary: string; so
       summary: alerts.length ? `${alerts.length} alertas pendientes. Atienda primero: ${alerts[0]}.` : "Sin alertas pendientes. Todo en orden.",
       source: "reglas",
     };
+  }
+}
+
+/** Latest value posted by the physical sensor node. Throws if the backend cannot be reached. */
+export async function fetchDeviceLatest(): Promise<DeviceLatest> {
+  if (!API_URL) throw new Error("API not configured");
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const res = await fetch(`${API_URL}/api/readings/latest`, { signal: ctrl.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()) as DeviceLatest;
+  } finally {
+    clearTimeout(timer);
   }
 }
